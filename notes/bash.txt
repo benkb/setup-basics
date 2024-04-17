@@ -1,0 +1,10 @@
+
+## Evaluate/Interpolate variables
+
+
+
+sys_var='HOME'
+
+env_var="${!sys_var}"
+
+=> return var for HOME
