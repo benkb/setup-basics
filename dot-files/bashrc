@@ -1,0 +1,57 @@
+# ~/.bashrc:  
+# - configurations for interactive Bash usage , aliases, favorite editor, config the bash prompt
+# - executed by bash for interactive non-login shells.
+#
+
+# in this setup ~/.bashrc is called by .bash_profile
+# If not running interactively, don't do anything
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+
+set -o vi
+
+# See bash(1) for more options
+HISTCONTROL=ignoreboth
+
+# append to the history file, don't overwrite it
+shopt -s histappend
+
+# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
+HISTSIZE=1000
+HISTFILESIZE=2000
+
+# check the window size after each command and, if necessary,
+# update the values of LINES and COLUMNS.
+shopt -s checkwinsize
+
+##### ~/.profile  OR exit !!!!!
+#
+if [ -f "$HOME/.profile" ] ; then
+   # shell agnostic profile
+   source "$HOME/.profile"
+else
+   echo 'Warn: could not locate ~/.profile'
+   echo 'premature exiting of ~/.bashrc'
+   exit
+fi
+## Depending on ~/.profile
+
+if [ -n "$BINPATHS" ] ; then
+   for d in $BINPATHS ; do
+      [ -e "$d" ] && { PATH="$d:$PATH"; }
+   done
+fi
+
+for dir in "$ALIASES" "$MORECONFIGS" ; do
+   [ -d "$dir" ] || continue
+   for shfile in $dir/*.*sh ; do
+      case "$shfile" in
+         *.sh|*.bash) [ -f "$shfile" ] && source "$shfile" ;;
+         *) : ;;
+      esac
+   done
+done
+
+. "$HOME/.cargo/env"
