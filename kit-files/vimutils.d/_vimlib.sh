@@ -4,6 +4,8 @@
 
 set -u
 
+HOMEKIT=$HOME/kit
+
 VIMLIB__PIPE_EXT='.vipipe'
 VIMLIB__TMUX_SESS='VIOUT'
 
@@ -21,11 +23,11 @@ _absdir() { prn "$(
 	pwd -P
 )"; }
 
-shtdlib="$HOME/.$USER/utils/shtdlib.sh"
-if [ -f "$shtdlib" ]; then
-    . "$shtdlib"
+stdlib="$HOMEKIT/utils/_stdlib.sh"
+if [ -f "$stdlib" ]; then
+    . "$stdlib"
 else
-    _die "Err: no lib under '$shtdlib'"
+    _die "Err: no lib under '$stdlib'"
 fi
 
 vimlib__dir_token() {
@@ -40,7 +42,7 @@ vimlib__dir_token() {
     dirname="$(perl -e '($a)=@ARGV; $a =~ s/[^A-Za-z0-9]+/_/g; print $a;' "${dir##*/}")"
 
 	local token
-	token="$(shtdlib__md5sum "$absdir")" || die "Err: could not get md5sum"
+	token="$(stdlib__md5sum "$absdir")" || die "Err: could not get md5sum"
     [ -n "$token" ] || die "Err: token is empty"
 
 	prn "${dirname}-${token}"

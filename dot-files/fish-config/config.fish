@@ -33,6 +33,23 @@ for fishdir in $ALIASES $MORECONFIGS "$HOME/.$USER/fishconf"
    end
 end
 
+for fishdir in $HOME/kit/vimutils $HOME/kit/utils
+   if [ -d $fishdir ] 
+      for shfile in $fishdir/*.*sh ; 
+         switch "$shfile"
+             case '_*'
+                 continue
+            case '*'.fish
+                set name (basename $shfile .fish)
+               [ -f $shfile ] &&  alias $name="fish $shfile"
+            case '*'.sh
+                set name (basename $shfile .sh)
+               [ -f $shfile ] &&  alias $name="sh $shfile"
+         end
+      end
+   end
+end
+
 
 
 

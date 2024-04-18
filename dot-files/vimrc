@@ -177,7 +177,7 @@ function! Vitask(mode)
        return 
    endif
 
-   let script = "$HOME/.$USER/vimutils/vitask-send.sh"
+   let script = "$HOME/kit/vimutils/vitask-send.sh"
    let realscript = resolve(expand(script))
 
    let realinput = resolve(expand("%:~:."))

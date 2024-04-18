@@ -25,7 +25,7 @@ clean_trap () {
 }
 
 vimlib=
-vimlib="$(absdir $0 )"/vimlib.sh
+vimlib="$(absdir $0 )"/_vimlib.sh
 if [ -f "$vimlib" ]; then
     . $vimlib
 else
