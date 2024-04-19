@@ -12,10 +12,19 @@ _die() {
 	echo "$@"
 	exit 1
 }
-_absdir() { prn "$(
-	cd "$(dirname -- "${1:-}")" >/dev/null
-	pwd -P
-)"; }
+
+stdlib__hello(){ 
+    echo 'Hello from stdlib, test successfully'
+}
+
+stdlib__absdir(){ 
+    local fso="${1:-}"
+    [ -n "$fso" ] || die "Err: no filesystem object (file/dir)"
+    if [ -f "$fso" ] ; then (cd "$(dirname "$fso" 2>/dev/null)" && pwd -P)
+    elif [ -d "$fso" ] ; then (cd "$fso" 2>/dev/null && pwd -P)
+    else die "Err: invalid filesystem object (file/dir) under $fso"
+    fi
+}
 
 stdlib__realpath() {
 	local path="${1:-}"

@@ -2,7 +2,7 @@
 
 # Helper/Utilities for working with tmux
 #
-# Usage: [--|- Options] <Command> [args]
+# Usage: [Options] <Command> [args]
 #
 # Options:
 #   --help        show help
@@ -19,21 +19,40 @@
 #           ls 
 #       sess
 
-prn(){ printf "%s" $@; }
-info(){ echo "$@" >&2;  }
-die(){ echo "$@" >&2; exit 1; }
+tmuxutil__init(){
+    :
+}
 
-help(){ perl -ne 'print "$1\n" if /^\s*#\s+(.*)/; exit if /^\s*[^#\s]+/;' "$0" >&2; }
-usage(){ help | grep Usage  ; die "or: --help" ; }
+tmuxutil__main(){
+    [ -n "${1:-}" ] || usage
 
+    local cmd
+    while [ $# -gt 0 ] ; do
+        case "$1" in
+            -h|--help) help ; exit 1 ;;
+            -*) die "Err: invalid option '$1'";;
+            *)  cmd="$1"; shift; break ;;
+        esac
+        shift
+    done 
 
-absdir(){ 
-    local fso="${1:-}"
-    [ -n "$fso" ] || die "Err: no filesystem object (file/dir)"
-    if [ -f "$fso" ] ; then (cd "$(dirname "$fso" 2>/dev/null)" && pwd -P)
-    elif [ -d "$fso" ] ; then (cd "$fso" 2>/dev/null && pwd -P)
-    else die "Err: invalid filesystem object (file/dir) under $fso"
-    fi
+    [ -n "$cmd" ] || usage
+
+    # cmds
+    # new session
+    # rename session
+
+    case "$cmd" in
+        is) tmuxutil__cmd_is "$@";;
+        l|list) tmuxutil__cmd_list "$@";;
+        ls) tmuxutil__cmd_list "$@" 'sess';;
+        lw) tmuxutil__cmd_list "$@" 'win';;
+        get) tmuxutil__cmd_get "$@" ;;
+        gw) tmuxutil__cmd_get "$@" 'win';;
+        gs) tmuxutil__cmd_get "$@" 'sess';;
+        *) die "Err: invalid command '$cmd'" ;; 
+    esac
+
 }
 
 tmuxutil__is_up(){
@@ -146,38 +165,55 @@ tmuxutil__cmd_is(){
     esac
 }
 
-tmuxutil__main(){
-    [ -n "${1:-}" ] || usage
 
-    local cmd
-    while [ $# -gt 0 ] ; do
-        case "$1" in
-            -h|--help) help ; exit 1 ;;
-            -*) die "Err: invalid option '$1'";;
-            *)  cmd="$1"; shift; break ;;
-        esac
-        shift
-    done 
 
-    [ -n "$cmd" ] || usage
 
-    # cmds
-    # new session
-    # rename session
+######## Prelude
 
-    case "$cmd" in
-        is) tmuxutil__cmd_is "$@";;
-        l|list) tmuxutil__cmd_list "$@";;
-        ls) tmuxutil__cmd_list "$@" 'sess';;
-        lw) tmuxutil__cmd_list "$@" 'win';;
-        get) tmuxutil__cmd_get "$@" ;;
-        gw) tmuxutil__cmd_get "$@" 'win';;
-        gs) tmuxutil__cmd_get "$@" 'sess';;
-        *) die "Err: invalid command '$cmd'" ;; 
-    esac
+prn(){ printf "%s" $@; }
+info(){ echo "$@" >&2;  }
+die(){ echo "$@" >&2; exit 1; }
 
+help(){ perl -ne 'print "$1\n" if /^\s*#\s+(.*)/; exit if /^\s*[^#\s]+/;' "$0"; }
+usage(){ help | grep Usage 1>&2 ; die "or: --help" ; }
+absdir(){ 
+    local fso="${1:-}"
+    if [ -f "$fso" ] ; then (cd "$(dirname "$fso" 2>/dev/null)" && pwd -P)
+    elif [ -d "$fso" ] ; then (cd "$fso" 2>/dev/null && pwd -P)
+    else die "Err: invalid filesystem object (file/dir) under '$fso'"
+    fi
+}
+
+libpath(){
+    local lib="${1:-}"; local pkg="${2:-}" local version="${3:-}"
+    local lib_str
+    case $# in 3) lib_str="$pkg/${lib%.*}/${lib%.*}_${version}.${lib##*.}" ;; 2) lib_str="$pkg/${lib}";; 1) lib_str="${lib}";; esac
+    [ -n "$lib_str" ] || die "Err: could not set lib_str, wron number of args"
+    local lib_path
+    for dir in "${MAINDIR:-}" ${BKB_LIBRARY_PATH:-} "$HOME/.local/bkblib"; do
+        if [ -f "$dir/$lib_str" ]; then lib_path="$dir/$lib_str";  BKB_LIBS="${lib},${lib_str} ${BKB_LIBS:-}"; break ; fi
+    done
+    [ -f "${lib_path:-}" ] || die "Err: could not find lib for '$lib'" 
+    prn "${lib_path}"
+}
+
+loadlib(){ # for foolib.sh modulino.dash 
+    local lib="${1:-}";
+    case "${lib:-}" in *lib.sh|*.dash) : ;; *) die "Err: not a valid lib '${lib:-}'" ;; esac
+    local lib_str
+    for l in ${BKB_LIBS:-}; do 
+        if [ "${l%,*}" = "$lib" ]; then
+            if [ "${l##*,}" = "$lib_str" ]; then  return 0; else info "Warn: lib '$lib' loaded,  '$lib_str' not loaded"; return 1; fi
+        fi
+    done
+    local lib_path; lib_path="$(libpath $@)" || die "Err: library not loaded '$lib'"
+    . "$lib_path"
 }
 
 
-
-[ -n "${MODULINO:-}" ] || tmuxutil__main "$@"
+if [ -z "${MAINDIR:-}" ] ; then
+    MAINDIR="$(absdir "$0")" || die "Err: could not set MAINDIR"
+    tmuxutil__init && tmuxutil__main "$@" 
+else
+    tmuxutil__init
+fi
