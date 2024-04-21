@@ -56,7 +56,7 @@ tmuxutil__main(){
 }
 
 tmuxutil__is_up(){
-    if tmux info > /dev/null ; then
+    if tmux 'info' > /dev/null ; then
         echo tmux is running
         return 0
     else
@@ -170,7 +170,7 @@ tmuxutil__cmd_is(){
 
 ######## Prelude
 
-prn(){ printf "%s" $@; }
+prn(){ printf "%s" "$@"; }
 info(){ echo "$@" >&2;  }
 die(){ echo "$@" >&2; exit 1; }
 
@@ -185,7 +185,7 @@ absdir(){
 }
 
 libpath(){
-    local lib="${1:-}"; local pkg="${2:-}" local version="${3:-}"
+    local lib="${1:-}"; local pkg="${2:-}"; local version="${3:-}"
     local lib_str
     case $# in 3) lib_str="$pkg/${lib%.*}/${lib%.*}_${version}.${lib##*.}" ;; 2) lib_str="$pkg/${lib}";; 1) lib_str="${lib}";; esac
     [ -n "$lib_str" ] || die "Err: could not set lib_str, wron number of args"
@@ -206,7 +206,7 @@ loadlib(){ # for foolib.sh modulino.dash
             if [ "${l##*,}" = "$lib_str" ]; then  return 0; else info "Warn: lib '$lib' loaded,  '$lib_str' not loaded"; return 1; fi
         fi
     done
-    local lib_path; lib_path="$(libpath $@)" || die "Err: library not loaded '$lib'"
+    local lib_path; lib_path="$(libpath "$@")" || die "Err: library not loaded '$lib'"
     . "$lib_path"
 }
 

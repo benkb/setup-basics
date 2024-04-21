@@ -37,33 +37,37 @@ template__main(){
 
     stdlib__hello
 
-    
     local cmd
     while [ $# -gt 0 ] ; do
         case "$1" in
             -h|--help) help 1>&2 ; exit 1 ;;
             -*) die "Err: invalid option '$1'";;
-            *)  cmd="$1"; shift; break ;;
+            say|greet) cmd="$1"; shift; break ;;
+            *) die "Err: could not find cmd for '$1' run --help" ;;
         esac
         shift
     done 
 
-    [ -n "$cmd" ] || usage
+    if [ -n "${1:-}" ] ; then
+        local object="${1:-}"
 
-    case "$cmd" in
-        hello) stdlib__hello "$@";;
-        one) echo one  "$@";;
-        two) echo two  "$@";;
-        *) die "Err: invalid command '$cmd'" ;; 
-    esac
-
+        case "$object" in
+            hello) stdlib__hello "$@";;
+            one) echo one  "$@";;
+            two) echo two  "$@";;
+            *) die "Err: invalid command '$cmd'" ;; 
+        esac
+    fi
 }
 
 ######## Prelude
 
-prn(){ printf "%s" $@; }
+prn(){ printf "%s" "$@"; }
 info(){ echo "$@" >&2;  }
 die(){ echo "$@" >&2; exit 1; }
+
+filedie() { [ -f "${1:-}" ] || die "Err: file '${1:-}' does not exist"  ; }
+dirdie() { [ -d "${1:-}" ] || die "Err: dir '${1:-}' does not exist"  ; }
 
 help(){ perl -ne 'print "$1\n" if /^\s*#\s+(.*)/; exit if /^\s*[^#\s]+/;' "$0"; }
 usage(){ help | grep Usage 1>&2 ; die "or: --help" ; }
@@ -75,8 +79,10 @@ absdir(){
     fi
 }
 
+######## Module Functions 
+
 libpath(){
-    local lib="${1:-}"; local pkg="${2:-}" local version="${3:-}"
+    local lib="${1:-}"; local pkg="${2:-}"; local version="${3:-}"
     local lib_str
     case $# in 3) lib_str="$pkg/${lib%.*}/${lib%.*}_${version}.${lib##*.}" ;; 2) lib_str="$pkg/${lib}";; 1) lib_str="${lib}";; esac
     [ -n "$lib_str" ] || die "Err: could not set lib_str, wron number of args"
@@ -97,10 +103,11 @@ loadlib(){ # for foolib.sh modulino.dash
             if [ "${l##*,}" = "$lib_str" ]; then  return 0; else info "Warn: lib '$lib' loaded,  '$lib_str' not loaded"; return 1; fi
         fi
     done
-    local lib_path; lib_path="$(libpath $@)" || die "Err: library not loaded '$lib'"
+    local lib_path; lib_path="$(libpath "$@")" || die "Err: library not loaded '$lib'"
     . "$lib_path"
 }
 
+######## Modulino 
 
 if [ -z "${MAINDIR:-}" ] ; then
     MAINDIR="$(absdir "$0")" || die "Err: could not set MAINDIR"

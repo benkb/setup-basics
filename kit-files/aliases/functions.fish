@@ -2,6 +2,19 @@
 
 set UTILS $HOME/.local/utils
 
+function cdreal;
+   switch (count $argv)
+      case '0'
+        cd (pwd -P)
+      case '1'
+        cd (pwd $argv[1])
+    case '*'
+        echo "Warn: invalid number of args"
+        return 1
+   end
+end
+
+
 function ,cdreal; 
    set -l truepath $UTILS/truepath
    if [ -f "$truepath" ] ; 

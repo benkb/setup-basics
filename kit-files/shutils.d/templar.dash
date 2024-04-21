@@ -1,0 +1,122 @@
+#!/bin/sh
+
+# Create a new sript
+# 
+# Takes a template and create new script
+#
+# Usage: [Options] <Object> [target]
+#
+# Options:
+#   --help      show help
+#
+# Objects:
+#   modulino    create new modulino 
+#   script      create a simple script 
+#
+# Arguments:
+#   [target]    define the target name, function names are aligned
+
+set -u
+
+
+templar__init(){
+    :
+}
+
+templar_modulino(){
+    local template="${1:-}"
+    [ -n "$template" ] || die "Err: no template"
+    local target="${2:-}"
+
+    [ -f "$template" ] || die "Err: could not find template for template '$template'"
+    if [ "${target}" ] ; then
+        perl -pe "s/template__/${target}__/g" "$template"
+    else
+        cat "$template"
+    fi
+}
+
+templar__filter (){
+    local template="${1:-}"
+    [ -n "$template" ] || die "Err: no template"
+    local filter="${2:-}"
+    [ -n "$filter" ] || die "Err: no filter"
+    
+    local filter_template_pl="$MAINDIR/_filter-${filter}-template.pl"
+    [ -f "$filter_template_pl" ] || die "Err: could not find filter '$filter_template_pl'"
+    perl -n "$filter_template_pl" "$template"
+}
+
+templar__main(){
+    [ -n "${1:-}" ] || usage
+    
+    local tpl="_template.dash"
+    local template
+    template="$(libpath "$tpl")" 
+    [ -f "$template" ] || die "Err: could not find template for template '$template'"
+
+    local object
+    while [ $# -gt 0 ] ; do
+        case "$1" in
+            -h|--help) help 1>&2 ; exit 1 ;;
+            -*) die "Err: invalid option '$1'";;
+            script) templar__filter "$template" "$1"; break ;; 
+            modulino) templar__modulino "$template" "${2:-}"; break ;;
+            *) die "Err: could not find object for '${1}' run --help";;
+        esac
+        shift
+    done 
+
+
+
+}
+
+######## Prelude
+
+prn(){ printf "%s" "$@"; }
+info(){ echo "$@" >&2;  }
+die(){ echo "$@" >&2; exit 1; }
+
+help(){ perl -ne 'print "$1\n" if /^\s*#\s+(.*)/; exit if /^\s*[^#\s]+/;' "$0"; }
+usage(){ help | grep Usage 1>&2 ; die "or: --help" ; }
+absdir(){ 
+    local fso="${1:-}"
+    if [ -f "$fso" ] ; then (cd "$(dirname "$fso" 2>/dev/null)" && pwd -P)
+    elif [ -d "$fso" ] ; then (cd "$fso" 2>/dev/null && pwd -P)
+    else die "Err: invalid filesystem object (file/dir) under '$fso'"
+    fi
+}
+
+libpath(){
+    local lib="${1:-}"; local pkg="${2:-}"; local version="${3:-}"
+    local lib_str
+    case $# in 3) lib_str="$pkg/${lib%.*}/${lib%.*}_${version}.${lib##*.}" ;; 2) lib_str="$pkg/${lib}";; 1) lib_str="${lib}";; esac
+    [ -n "$lib_str" ] || die "Err: could not set lib_str, wron number of args"
+    local lib_path
+    for dir in "${MAINDIR:-}" ${BKB_LIBRARY_PATH:-} "$HOME/.local/bkblib"; do
+        if [ -f "$dir/$lib_str" ]; then lib_path="$dir/$lib_str";  BKB_LIBS="${lib},${lib_str} ${BKB_LIBS:-}"; break ; fi
+    done
+    [ -f "${lib_path:-}" ] || die "Err: could not find lib for '$lib'" 
+    prn "${lib_path}"
+}
+
+loadlib(){ # for foolib.sh modulino.dash 
+    local lib="${1:-}";
+    case "${lib:-}" in *lib.sh|*.dash) : ;; *) die "Err: not a valid lib '${lib:-}'" ;; esac
+    local lib_str
+    for l in ${BKB_LIBS:-}; do 
+        if [ "${l%,*}" = "$lib" ]; then
+            if [ "${l##*,}" = "$lib_str" ]; then  return 0; else info "Warn: lib '$lib' loaded,  '$lib_str' not loaded"; return 1; fi
+        fi
+    done
+    local lib_path; lib_path="$(libpath "$@")" || die "Err: library not loaded '$lib'"
+    . "$lib_path"
+}
+
+
+if [ -z "${MAINDIR:-}" ] ; then
+    MAINDIR="$(absdir "$0")" || die "Err: could not set MAINDIR"
+    templar__init && templar__main "$@" 
+else
+    templar__init
+fi

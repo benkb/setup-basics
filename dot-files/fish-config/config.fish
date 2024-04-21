@@ -40,7 +40,7 @@ for fishdir in $HOME/kit/vimutils $HOME/kit/shutils
          switch "$shfile"
              case '_*'
                  continue
-            case '*lib'.*
+            case '*lib'.'*'
                 continue
             case '*'.fish
                 set name (basename $shfile .fish)
@@ -59,7 +59,14 @@ for fishdir in $HOME/kit/vimutils $HOME/kit/shutils
    end
 end
 
-
+for aliasfile in "$HOME/kit/aliases"/*;
+    switch "$aliasfile"
+        case '*.fish'
+            source $aliasfile
+        case '*'
+            continue
+    end
+end
 
 
 
