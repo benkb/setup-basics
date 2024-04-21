@@ -17,11 +17,17 @@ DIR_TYPE="${SCRIPTDIR_NAME%-*}"
 DIR_FOLDER="${DIR_TYPE}s"
 BASEFOLDER="$HOMEBASE/${DIR_FOLDER}"
 
+
 HOMEFOLDER=
+DOTFILE=
 case "$SCRIPTDIR_NAME" in 
-    dot-files)   HOMEFOLDER="$HOME/." ;;
-    *-files)     HOMEFOLDER="$HOME/${DIR_TYPE}/" ;;
-    *)      die "Err: '$SCRIPTDIR_NAME' does not look a files folder" ;;
+    *-files)     
+        case "$DIR_TYPE" in
+            dot) DOTFILE=1 ;;
+            *) : ;;
+        esac
+        HOMEFOLDER="$HOME/${DIR_TYPE}" ;;
+    *)  die "Err: '$SCRIPTDIR_NAME' does not look a files folder" ;;
 esac
 
 mkdir -p "$BASEJUMP"
@@ -36,6 +42,13 @@ ln -s "$SCRIPTDIR" "$BASEJUMP/$SCRIPTDIR_NAME"
 
 rm -f "$BASEJUMP/$DIR_FOLDER"
 ln -s "$BASEFOLDER" "$BASEJUMP/$DIR_FOLDER"
+
+rm -f "$BASEJUMP/$DIR_FOLDER"
+ln -s "$BASEFOLDER" "$BASEJUMP/$DIR_FOLDER"
+
+rm -f "$BASEJUMP/$DIR_TYPE"
+ln -s "$HOMEFOLDER" "$BASEJUMP/$DIR_TYPE"
+
 
 remove_target(){
     local target="${1:-}"
@@ -65,14 +78,13 @@ link_to_target(){
 
     local target_base="${target##*/}"
 
-    case "$target_base" in
-        .*)
-            rm -f "${BASEJUMP}/${target_base}"
-            ln -s "$source" "${BASEJUMP}/${target_base}"
-        ;;
-        *) : ;;
-    esac
+    rm -f "${BASEJUMP}/${target_base}"
+    ln -s "$source" "${BASEJUMP}/${target_base}"
 
+    if [ -n "$DOTFILE" ] ; then
+        remove_target "${HOME}/.${target_base}"
+        ln -s "$source" "${HOME}/.${target_base}"
+    fi
 }
 
 
@@ -86,14 +98,14 @@ for i in "$PWD"/* ; do
     target_name="${bi%.*}"
 
     if [ -f "$i" ] ; then
-    	link_to_target "$i" "${HOMEFOLDER}${bi}"
+    	link_to_target "$i" "${HOMEFOLDER}/${bi}"
 	elif [ -d "$i" ] ; then
         homedot_targetdir=
         homedot_targetpath=
         target_path="$(perl -e '($a)=@ARGV; print(join("/", reverse( map { (/^[A-Z]+$/)?$ENV{$_}:$_ } split("-", $a))))' "$target_name")" 
-        homedot_targetpath="${HOMEFOLDER}${target_path}"
+        homedot_targetpath="${HOMEFOLDER}/${target_path}"
         targetdir="${target_path%/*}"
-        homedot_targetdir="${HOMEFOLDER}${targetdir}"
+        homedot_targetdir="${HOMEFOLDER}/${targetdir}"
         #
         if [ "$homedot_targetpath" != "$homedot_targetdir" ] ; then
             mkdir -p "$homedot_targetdir"

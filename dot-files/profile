@@ -62,20 +62,14 @@ test -d "$HOME/go/bin" && export PATH="$HOME/go/bin:$PATH"
 ### LANG 
 test -d "$JAVA_HOME" &&  export PATH="$JAVA_HOME/bin:$PATH"
 test -d "$LLVM_HOME" &&  export PATH="$LLVM_HOME/bin:$PATH"
-test -d "$HOME/build/lobster" &&  export PATH="$HOME/build/lobster/bin:$PATH"
 
 
 
 ## ALIASES
+#
 test -f '/usr/local/opt/vim/bin/vim' && alias vim='/usr/local/opt/vim/bin/vim'
 
-test -f "$HOME/dev/benkb-pub/sew/sew.git/sew.sh" && alias sew='sh $HOME/dev/benkb-pub/sew/sew.git/sew.sh'
-
 export HOMEKIT=$HOME/kit
-
-test -f "$HOME/.bin/millw.sh" && alias millw="/usr/bin/env dash $HOME/.bin/millw.sh"
-
-
 
 ## MISC
 export NVM_DIR="$HOME/.nvm"
@@ -89,3 +83,21 @@ test -f "$HOME/.xmake/profile" && source "$HOME/.xmake/profile"
 #
 # gopherjs
 export GOPHERJS_GOROOT="$(go1.19.13 env GOROOT)"
+# dir constants
+#
+#echo loading aliases
+
+
+# dir constants
+#
+#echo loading aliases
+
+alias chmox='chmod 0755'
+alias findi='find . -iname'
+
+alias ,xargs='xargs -r0 -I {} '
+
+
+
+alias ,more='more -R'
+

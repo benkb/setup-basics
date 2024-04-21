@@ -15,7 +15,6 @@ set -gx GPG_TTY (/usr/bin/tty)
 
 [ -e $HOME/.profile ]  && source $HOME/.profile
 
-#exit
 
 # search and source fish aliases
 [ -f "$SHUTILS_HOME/_aliases.sh" ] && source "$SHUTILS_HOME/_aliases.sh"
@@ -59,12 +58,16 @@ for fishdir in $HOME/kit/vimutils $HOME/kit/shutils
    end
 end
 
-for aliasfile in "$HOME/kit/aliases"/*;
-    switch "$aliasfile"
-        case '*.fish'
-            source $aliasfile
-        case '*'
-            continue
+if [ -d "$HOME/kit/aliases" ] 
+    for aliasfile in "$HOME/kit/aliases"/*;
+        [ -f "$aliasfile" ] || continue
+
+        switch "$aliasfile"
+            case '*.fish'
+                source $aliasfile
+            case '*'
+                continue
+        end
     end
 end
 

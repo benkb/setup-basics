@@ -1,3 +1,8 @@
+
+test -f "$HOME/dev/benkb-pub/sew/sew.git/sew.sh" && alias sew='sh $HOME/dev/benkb-pub/sew/sew.git/sew.sh'
+test -f "$HOME/.bin/millw.sh" && alias millw="/usr/bin/env dash $HOME/.bin/millw.sh"
+test -d "$HOME/build/lobster" &&  export PATH="$HOME/build/lobster/bin:$PATH"
+alias ,shfmt='shfmt -i 4 -w'
 # dir constants
 #
 #echo loading aliases
