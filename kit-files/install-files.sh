@@ -19,11 +19,11 @@ BASEFOLDER="$HOMEBASE/${DIR_FOLDER}"
 
 
 HOMEFOLDER=
-DOTFILE=
+DOTFILES=
 case "$SCRIPTDIR_NAME" in 
     *-files)     
         case "$DIR_TYPE" in
-            dot) DOTFILE=1 ;;
+            dot) DOTFILES=1 ;;
             *) : ;;
         esac
         HOMEFOLDER="$HOME/${DIR_TYPE}" ;;
@@ -70,20 +70,17 @@ remove_target(){
 link_to_target(){
     local source="${1:-}"
     [ -n "$source" ] || die "Err: no source"
-    local target="${2:-}"
-    [ -n "$target" ] || die "Err: no target"
+    local target_item="${2:-}"
+    [ -n "$target_item" ] || die "Err: no target_item"
+
+    local target="$HOMEFOLDER/$target_item"
 
     remove_target "$target"
     ln -s "$source" "$target"
 
-    local target_base="${target##*/}"
-
-    rm -f "${BASEJUMP}/${target_base}"
-    ln -s "$source" "${BASEJUMP}/${target_base}"
-
-    if [ -n "$DOTFILE" ] ; then
-        remove_target "${HOME}/.${target_base}"
-        ln -s "$source" "${HOME}/.${target_base}"
+    if [ -n "$DOTFILES" ] ; then
+        remove_target "${HOME}/.${target_item}"
+        ln -s "$source" "${HOME}/.${target_item}"
     fi
 }
 
@@ -97,28 +94,55 @@ for i in "$PWD"/* ; do
 
     target_name="${bi%.*}"
 
+
     if [ -f "$i" ] ; then
-    	link_to_target "$i" "${HOMEFOLDER}/${bi}"
-	elif [ -d "$i" ] ; then
-        homedot_targetdir=
-        homedot_targetpath=
-        target_path="$(perl -e '($a)=@ARGV; print(join("/", reverse( map { (/^[A-Z]+$/)?$ENV{$_}:$_ } split("-", $a))))' "$target_name")" 
-        homedot_targetpath="${HOMEFOLDER}/${target_path}"
-        targetdir="${target_path%/*}"
-        homedot_targetdir="${HOMEFOLDER}/${targetdir}"
-        #
-        if [ "$homedot_targetpath" != "$homedot_targetdir" ] ; then
-            mkdir -p "$homedot_targetdir"
+    	link_to_target "$i" "${bi}"
+        if [ -n "$DOTFILES" ]; then
+            rm -f "${BASEJUMP}/.${bi}"
+            ln -s "$i" "${BASEJUMP}/.${bi}"
+        else
+            rm -f "${BASEJUMP}/${bi}"
+            ln -s "$i" "${BASEJUMP}/${bi}"
         fi
+	elif [ -d "$i" ] ; then
+        case "$target_name" in
+            dot-home) : ;;
+            *-*)
+                target_path="$(perl -e '($a)=@ARGV; print(join("/", reverse( map { (/^[A-Z]+$/)?$ENV{$_}:$_ } split("-", $a))))' "$target_name")" 
+                target_folder="${target_path%/*}"
+                mkdir -p "$HOMEFOLDER/$target_folder"
+                if [ -n "$DOTFILES" ]; then
+                    mkdir -p "$HOME/.$target_folder"
+                    rm -f "${BASEJUMP}/.${target_folder}"
+                    ln -s "$HOME/.$target_folder" "$BASEJUMP/.$target_folder"
+                else
+                    rm -f "${BASEJUMP}/${target_folder}"
+                    ln -s "$HOMEFOLDER/$target_folder" "${BASEJUMP}/${target_folder}"
+                fi
+                ;;
+            *) target_path="$target_name" ;;
+        esac
+
 
         case "$bi" in
-            *.d) link_to_target "$i" "$homedot_targetpath" ;;
-            *)
-                mkdir -p "$homedot_targetpath"
+            dot-home)
                 for ii in "$i"/* ; do 
                     [ -f "$ii" ] || [ -d "$ii" ] || continue 
                     bii="${ii##*/}"
-                    dotii="$homedot_targetpath/$bii"
+                    rm -f "$HOME/.$bii"
+                    ln -s "$ii" "$HOME/.$bii"
+                    rm -f "$BASEJUMP/.$bii"
+                    ln -s "$ii" "$BASEJUMP/.$bii"
+                done
+                ;;
+            *.d) link_to_target "$i" "$target_path" ;;
+            *)
+                mkdir -p "$HOMEFOLDER/$target_path"
+                [ -n "$DOTFILES" ] && mkdir -p "$HOME/.$target_path"
+                for ii in "$i"/* ; do 
+                    [ -f "$ii" ] || [ -d "$ii" ] || continue 
+                    bii="${ii##*/}"
+                    dotii="$target_path/$bii"
                     if [ -f "$ii" ] ; then 
                         link_to_target "$ii" "$dotii"
                     elif [ -d "$ii" ] ; then 

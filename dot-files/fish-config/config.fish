@@ -4,6 +4,7 @@
 # - control the inclusion manually here in ~/.config/fish/config.fish
 
 # start in insert mode
+
 fish_vi_key_bindings insert
 
 set -gx GPG_TTY (/usr/bin/tty)
@@ -15,56 +16,17 @@ set -gx GPG_TTY (/usr/bin/tty)
 
 [ -e $HOME/.profile ]  && source $HOME/.profile
 
+status is-interactive || exit
 
-# search and source fish aliases
-[ -f "$SHUTILS_HOME/_aliases.sh" ] && source "$SHUTILS_HOME/_aliases.sh"
-
-for fishdir in $ALIASES $MORECONFIGS "$HOME/.$USER/fishconf"
-   if [ -d $fishdir ] 
-      for fishfile in $fishdir/*.*sh ; 
-         switch "$fishfile"
-            case '*'.fish
-               [ -f $fishfile ] && source  $fishfile
-            case '*'.sh
-               [ -f $fishfile ] && source $fishfile
-         end
-      end
-   end
-end
-
-for fishdir in $HOME/kit/vimutils $HOME/kit/shutils
-   if [ -d $fishdir ] 
-      for shfile in $fishdir/*.*sh ; 
-          # TODO generalize for *.(*sh)
-         switch "$shfile"
-             case '_*'
-                 continue
-            case '*lib'.'*'
-                continue
-            case '*'.fish
-                set name (basename $shfile .fish)
-               [ -f $shfile ] &&  alias $name="fish $shfile"
-            case '*'.sh
-                set name (basename $shfile .sh)
-               [ -f $shfile ] &&  alias $name="sh $shfile"
-            case '*'.dash
-                set name (basename $shfile .dash)
-               [ -f $shfile ] &&  alias $name="dash $shfile"
-            case '*'.bash
-                set name (basename $shfile .dash)
-               [ -f $shfile ] &&  alias $name="bash $shfile"
-         end
-      end
-   end
-end
-
-if [ -d "$HOME/kit/aliases" ] 
-    for aliasfile in "$HOME/kit/aliases"/*;
-        [ -f "$aliasfile" ] || continue
-
-        switch "$aliasfile"
-            case '*.fish'
-                source $aliasfile
+# sourcing configs and aliases
+for fishdir in $HOME/.config/env $HOME/kit/aliases
+    [ -d $fishdir ] || continue
+    for fishfile in $fishdir/*.*sh 
+        [ -f $fishfile ] || continue
+        
+        switch "$fishfile"
+            case '*.fish' '*.sh'
+                [ -f $fishfile ] && source $fishfile
             case '*'
                 continue
         end
@@ -72,28 +34,80 @@ if [ -d "$HOME/kit/aliases" ]
 end
 
 
+### Generate Aliases
+
+set non_script  'java*' 'log*' 'md' 'txt' 'conf' 'o' 'out' 'css' 'html' 'rkt' 'sml'  '' 'json' 'c'
+#set omits  'md txt conf o out css html rkt sml json c'
+
+
+
+function get_interp
+    set ext $argv[1]
+    switch $ext
+        case $non_script
+            return 1
+        case rb
+            echo 'ruby'
+        case pl
+            echo 'perl'
+        case py
+            echo python
+        case 'sh' 'bash' 'dash'
+            echo $ext
+        case '*'
+            echo "Warn: extension '$ext' not implemented, skip alias" >&2
+            return 1
+    end
+end
+
+
+for utilsdir in $HOME/kit/*
+    [ -d $utilsdir ] || continue
+
+    switch $utilsdir
+        case '*utils'
+            :
+        case '*'
+            continue
+    end
+
+    for scriptfile in $utilsdir/*
+        [ -f $scriptfile ] || continue
+
+        set bname (path basename $scriptfile)
+        set name (string split -r -m1 . $bname)[1]
+        set ext (string split -r -m1 . $bname)[2]
+
+        set interp (get_interp $ext)
+        if string length --quiet  $interp
+            switch "$name" 
+                case '_*' 'lib*'
+                    continue
+                case '*'
+                    alias $name="$interp $scriptfile"
+            end
+        end
+    end
+end
+        
 
 # posh: posix compatible
-alias posh '~/bin/mrsh'
+alias mrsh '~/bin/mrsh'
 
 #binsh: dash compatible - posix  + local scoping
 alias binsh 'dash'
 
 #shell: sane bash (binsh + arrays)
-alias shell '/usr/local/bin/yash'
+alias yash  '/usr/local/bin/yash'
 
 
-for bindir in "$HOME/.bin" "$HOME/.$USER/bin" "$HOME/.$USER/utils"
-    if test -d "$bindir" 
-        for bin in "$bindir"/*.sh
-            test -f $bin || continue
-            set bf (basename $bin .sh)
-            alias "$bf"="/bin/sh $bin"
-        end
-    end
-end
+#for bindir in "$HOME/.bin" "$HOME/.$USER/bin" "$HOME/.$USER/utils"
+#    if test -d "$bindir" 
+#        for bin in "$bindir"/*.sh
+#            test -f $bin || continue
+#            set bf (basename $bin .sh)
+#            alias "$bf"="/bin/sh $bin"
+#        end
+#    end
+#end
 
-
-# >>> coursier install directory >>>
-set -gx PATH "$PATH:/Users/ben/Library/Application Support/Coursier/bin"
-# <<< coursier install directory <<<

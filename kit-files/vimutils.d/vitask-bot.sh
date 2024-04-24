@@ -24,15 +24,15 @@ clean_trap () {
     info "Info: exiting trap"
 }
 
-vimlib=
-vimlib="$(absdir $0 )"/_vimlib.sh
-if [ -f "$vimlib" ]; then
-    . $vimlib
+libvim=
+libvim="$(absdir $0 )"/libvim.sh
+if [ -f "$libvim" ]; then
+    . $libvim
 else
-    die "Err: could not load vimlib"
+    die "Err: could not load libvim"
 fi
 
-pipe="$(vimlib__dir_token_pipe "$PWD")" || die "Err: could not get pipe name"
+pipe="$(libvim__dir_token_pipe "$PWD")" || die "Err: could not get pipe name"
 [ -n "$pipe" ] || die "Err: could not get pipefile"
 
 

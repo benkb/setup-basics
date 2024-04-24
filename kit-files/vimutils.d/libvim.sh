@@ -6,8 +6,9 @@ set -u
 
 HOMEKIT=$HOME/kit
 
-VIMLIB__PIPE_EXT='.vipipe'
-VIMLIB__TMUX_SESS='VIOUT'
+LIBVIM__PIPE_EXT='.vipipe'
+LIBVIM__TMUX_SESS='VIOUT'
+VITASK_FILE='vitask.conf'
 
 _say() {
 	printf '%s' "$@"
@@ -23,14 +24,18 @@ _absdir() { prn "$(
 	pwd -P
 )"; }
 
-stdlib="$HOMEKIT/utils/_stdlib.sh"
-if [ -f "$stdlib" ]; then
-    . "$stdlib"
+libstd="$HOMEKIT/shutils/libstd.sh"
+if [ -f "$libstd" ]; then
+    . "$libstd"
 else
-    _die "Err: no lib under '$stdlib'"
+    _die "Err: no lib under '$libstd'"
 fi
 
-vimlib__dir_token() {
+libvim__vitask_mode(){
+    mode="$(perl -ne '/^mode:\s*(.*)/ && print $1' "${1:-}")"
+}
+
+libvim__dir_token() {
 	local dir="${1:-}"
 	[ -n "$dir" ] || _die "Err: no dir"
 
@@ -42,21 +47,21 @@ vimlib__dir_token() {
     dirname="$(perl -e '($a)=@ARGV; $a =~ s/[^A-Za-z0-9]+/_/g; print $a;' "${dir##*/}")"
 
 	local token
-	token="$(stdlib__md5sum "$absdir")" || die "Err: could not get md5sum"
+	token="$(libstd__md5sum "$absdir")" || die "Err: could not get md5sum"
     [ -n "$token" ] || die "Err: token is empty"
 
 	prn "${dirname}-${token}"
 }
 
-vimlib__dir_token_pipe() {
+libvim__dir_token_pipe() {
 	local dir="${1:-}"
 	[ -n "$dir" ] || _die "Err: no dir"
 
     local dir_token
-    dir_token="$(vimlib__dir_token "$dir")" || die "Err: could not get dir_token"
+    dir_token="$(libvim__dir_token "$dir")" || die "Err: could not get dir_token"
     [ -n "$dir_token" ] || die "Err: dir_token empty"
 
-	[ -n "${VIMLIB__PIPE_EXT}" ] || die "Err: VIMLIB__PIPE_EXT empty"
-	prn "${dir_token}${VIMLIB__PIPE_EXT}"
+	[ -n "${LIBVIM__PIPE_EXT}" ] || die "Err: LIBVIM__PIPE_EXT empty"
+	prn "${dir_token}${LIBVIM__PIPE_EXT}"
 }
 

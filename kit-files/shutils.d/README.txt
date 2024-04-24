@@ -1,5 +1,11 @@
 Notes
 
+File:
+
+    *.dash:  Modulinos
+    lib*.sh: Sibraries
+    *.sh:    Scripts
+
 Modules in Shell
 
 - Modulinos and simple libraries can be sourced

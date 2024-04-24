@@ -1,3 +1,9 @@
+Dotfiles
+
+basic configuration of  standard tools like bash and vim
+
+
+
 install-dotfiles
 
 examples: 

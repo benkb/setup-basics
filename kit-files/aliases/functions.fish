@@ -3,11 +3,19 @@
 set UTILS $HOME/.local/utils
 
 function cdreal;
-   switch (count $argv)
-      case '0'
-        cd (pwd -P)
-      case '1'
-        cd (pwd $argv[1])
+    switch (count $argv)
+        case '0'
+            cd (pwd -P)
+        case '1'
+            set dir  $argv[1]
+            if [ -f $argv[1] ] ; 
+                set dir (dirname (realpath $argv[1]))
+            else if [ -d $argv[1] ] ; 
+                set dir (realpath $argv[1])
+            else
+                echo "Warn cannot get dir"
+            end
+            [ -n "$dir" ] && cd (realpath $dir)
     case '*'
         echo "Warn: invalid number of args"
         return 1

@@ -52,7 +52,7 @@ templar__main(){
     
     local tpl="_template.dash"
     local template
-    template="$(libpath "$tpl")" 
+    template="$(_bkblib__getpath "$tpl")" 
     [ -f "$template" ] || die "Err: could not find template for template '$template'"
 
     local object
@@ -71,52 +71,66 @@ templar__main(){
 
 }
 
+
 ######## Prelude
 
 prn(){ printf "%s" "$@"; }
 info(){ echo "$@" >&2;  }
 die(){ echo "$@" >&2; exit 1; }
-
+fail(){ printf "Fail %s\n" "$@" 1>&2; }
 help(){ perl -ne 'print "$1\n" if /^\s*#\s+(.*)/; exit if /^\s*[^#\s]+/;' "$0"; }
 usage(){ help | grep Usage 1>&2 ; die "or: --help" ; }
-absdir(){ 
-    local fso="${1:-}"
-    if [ -f "$fso" ] ; then (cd "$(dirname "$fso" 2>/dev/null)" && pwd -P)
-    elif [ -d "$fso" ] ; then (cd "$fso" 2>/dev/null && pwd -P)
-    else die "Err: invalid filesystem object (file/dir) under '$fso'"
-    fi
-}
 
-libpath(){
+
+######## Bkblib
+
+_bkblib__getpath(){
     local lib="${1:-}"; local pkg="${2:-}"; local version="${3:-}"
     local lib_str
     case $# in 3) lib_str="$pkg/${lib%.*}/${lib%.*}_${version}.${lib##*.}" ;; 2) lib_str="$pkg/${lib}";; 1) lib_str="${lib}";; esac
-    [ -n "$lib_str" ] || die "Err: could not set lib_str, wron number of args"
+    if [ -z "$lib_str" ]; then
+        fail  "(libpath): could not set lib_str, wrong number of args"
+        return 1
+    fi
     local lib_path
-    for dir in "${MAINDIR:-}" ${BKB_LIBRARY_PATH:-} "$HOME/.local/bkblib"; do
-        if [ -f "$dir/$lib_str" ]; then lib_path="$dir/$lib_str";  BKB_LIBS="${lib},${lib_str} ${BKB_LIBS:-}"; break ; fi
+    for dir in "${MAINDIR:-}" ${BKBLIB_LIBRARY_PATH:-} "$HOME/.local/bkblib"; do
+        if [ -f "$dir/$lib_str" ]; then lib_path="$dir/$lib_str";   BKBLIB_LIBS="${lib},${lib_str} ${BKBLIB_LIBS:-}"; break ; fi
     done
-    [ -f "${lib_path:-}" ] || die "Err: could not find lib for '$lib'" 
-    prn "${lib_path}"
+    if [ -f "${lib_path:-}" ]; then
+        prn "${lib_path}"
+    else
+        fail "(libpath): could not find lib for '$lib' for '$lib_str'  under lib_path '${lib_path:-}'" 
+        return 1
+    fi
 }
 
-loadlib(){ # for foolib.sh modulino.dash 
+_bkblib__source(){ # for foolib.sh modulino.dash 
     local lib="${1:-}";
-    case "${lib:-}" in *lib.sh|*.dash) : ;; *) die "Err: not a valid lib '${lib:-}'" ;; esac
+    case "${lib:-}" in lib*.sh|*.dash) : ;; *) fail "loadlib: not a valid lib '${lib:-}'"; return 1 ;; esac
     local lib_str
     for l in ${BKB_LIBS:-}; do 
         if [ "${l%,*}" = "$lib" ]; then
-            if [ "${l##*,}" = "$lib_str" ]; then  return 0; else info "Warn: lib '$lib' loaded,  '$lib_str' not loaded"; return 1; fi
+            if [ "${l##*,}" = "$lib_str" ]; then  return 0; else fail "(_bkblib__source): lib '$lib' loaded,  '$lib_str' not loaded"; return 1; fi
         fi
     done
-    local lib_path; lib_path="$(libpath "$@")" || die "Err: library not loaded '$lib'"
-    . "$lib_path"
+    local lib_path; lib_path="$(_bkblib__getpath "$@")" || { fail "(_bkblib__source): library not loaded '$lib'" ; return 1; }
+    . "$lib_path" || { fail "loadlib: could not source '$lib_path'" ; return 1; }
 }
 
+######## Modulino 
 
 if [ -z "${MAINDIR:-}" ] ; then
-    MAINDIR="$(absdir "$0")" || die "Err: could not set MAINDIR"
-    templar__init && templar__main "$@" 
+    MAINDIR="$(cd $(dirname "$0" 2>/dev/null) && pwd -P)" || die "Err: could not set MAINDIR"
+    [ -d "$MAINDIR" ] || die "Err: no valid MAINDIR with '$MAINDIR'"
+    templar__init || die "Err: (templar__init): could not init, imports failed, or not a modulino"
+    templar__main "$@"  
 else
-    templar__init
+    templar__init || { 
+        fail "(templar__init): could not init, imports failed or not a modulino"
+        return 1
+    }
 fi
+
+
+
+

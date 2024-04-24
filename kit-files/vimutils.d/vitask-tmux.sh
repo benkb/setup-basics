@@ -12,12 +12,12 @@ die (){ echo "$@" >&2; exit 1 ; }
 info (){ echo "$@" >&2; }
 absdir(){ prn "$(cd "$(dirname -- "${1:-}")" >/dev/null; pwd -P)";  }
 
-vimlib=
-vimlib="$(absdir $0 )"/_vimlib.sh
-if [ -f "$vimlib" ]; then
-    . $vimlib
+libvim=
+libvim="$(absdir $0 )"/libvim.sh
+if [ -f "$libvim" ]; then
+    . $libvim
 else
-    die "Err: could not load vimlib"
+    die "Err: could not load libvim"
 fi
 
 
@@ -26,14 +26,14 @@ vitask="$PWD/vitask.sh"
 [ -f "$vitask" ] || die "Err: no vitask file in '$vitask'" 
 
 tmux info &> /dev/null || die "Err: tmux server not yet running"
-tmux has-session -t "$VIMLIB__TMUX_SESS" || "Err: no vitmux session running '$VIMLIB__TMUX_SESS', please start manually first"
+tmux has-session -t "$LIBVIM__TMUX_SESS" || "Err: no vitmux session running '$LIBVIM__TMUX_SESS', please start manually first"
 
 
 tmux_target_win=''
-tmux_target_win="$(vimlib__dir_token "$PWD")" || die "Err: could not get tmux_target_win"
+tmux_target_win="$(libvim__dir_token "$PWD")" || die "Err: could not get tmux_target_win"
 [ -n "$tmux_target_win" ] || die "Err: tmux_target_win is empty"
 
-tmux_target_sesswin="${VIMLIB__TMUX_SESS}:${tmux_target_win}"
+tmux_target_sesswin="${LIBVIM__TMUX_SESS}:${tmux_target_win}"
 
 # check if inside tmux session
 # because in iTerm/Tmux , each new tab opens a tmux windows
@@ -42,7 +42,7 @@ if [ "$TERM_PROGRAM" = tmux ]; then
     this_sess="$(tmux display-message -p '#S')" || die "Err: could not get session name "
     [ -n "$this_sess" ] || die "Err: session is empty"
 
-    [ "$this_sess" = "$VIMLIB__TMUX_SESS" ] || die "Err: this is in the wrong session, its in '$this_sess', but should be in '$VIMLIB__TMUX_SESS'"
+    [ "$this_sess" = "$LIBVIM__TMUX_SESS" ] || die "Err: this is in the wrong session, its in '$this_sess', but should be in '$LIBVIM__TMUX_SESS'"
 
     this_win=''
     this_win="$(tmux display-message -p '#W')" || die "Err: could not get this window name "
@@ -79,7 +79,7 @@ else
         case "$answ" in
             n|N|no|No|NO) "Err: Ok leave" ;;
             *) 
-                tmux new-window -t "$VIMLIB__TMUX_SESS" -n "$tmux_target_win" 
+                tmux new-window -t "$LIBVIM__TMUX_SESS" -n "$tmux_target_win" 
                 #tmux attach -t "$tmux_target"  ;;
                 ;;
         esac

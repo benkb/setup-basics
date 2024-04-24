@@ -1,3 +1,4 @@
-# SC3043: local not posix
 # SC1090 (warning): ShellCheck can't follow non-constant source. Use a directive to specify location
-disable=SC3043,SC1090
+disable=SC1090
+# SC3043: local not posix
+#disable=SC3043

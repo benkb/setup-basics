@@ -22,10 +22,12 @@
 export LC_CTYPE=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
+# personal libraries ~/.local/bkblib/vimlib/vitmux/vitmxux_2023221132.sh
+export BKBLIB_LIBRARY_PATH="$HOME/.local/bkblib"
+
+########## PATH
+
 export PATH='/bin:/sbin:/usr/bin:/usr/local/bin'
-
-
-export BENKB_LIBRARY_PATH="$HOME/.local/benkblib"
 
 ## System Variables
 ### JAVA_HOME
@@ -58,46 +60,28 @@ test -d "$HOME/.opam/default/bin" && export PATH="$HOME/.opam/default/bin:$PATH"
 test -d "$HOME/.cargo/bin" && export PATH="$HOME/.cargo/bin:$PATH"
 test -d "/Applications/Racket v8.12/bin" &&  export PATH="/Applications/Racket v8.12/bin:$PATH"
 test -d "$HOME/go/bin" && export PATH="$HOME/go/bin:$PATH"
+test -d "$HOME/Library/Application Support/Coursier/bin" && export PATH="$HOME/Library/Application Support/Coursier/bin:$PATH"
 
 ### LANG 
 test -d "$JAVA_HOME" &&  export PATH="$JAVA_HOME/bin:$PATH"
 test -d "$LLVM_HOME" &&  export PATH="$LLVM_HOME/bin:$PATH"
 
 
-
 ## ALIASES
-#
+# In profile only essential commands
 test -f '/usr/local/opt/vim/bin/vim' && alias vim='/usr/local/opt/vim/bin/vim'
 
-export HOMEKIT=$HOME/kit
-
-## MISC
-export NVM_DIR="$HOME/.nvm"
-#[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-#
-# >>> xmake >>>
-test -f "$HOME/.xmake/profile" && source "$HOME/.xmake/profile"
-# <<< xmake <<<
-#
-#
-#
-# gopherjs
-export GOPHERJS_GOROOT="$(go1.19.13 env GOROOT)"
-# dir constants
-#
-#echo loading aliases
-
+# Everything else in in aliases.sh and aliases.fish etc in $HOME/kit/aliases/...
 
 # dir constants
 #
-#echo loading aliases
-
 alias chmox='chmod 0755'
 alias findi='find . -iname'
 
 alias ,xargs='xargs -r0 -I {} '
 
-
-
 alias ,more='more -R'
 
+test -f $HOME/.sbin/abspath.sh && alias abspath="dash $HOME/.sbin/abspath.sh"
+test -f $HOME/.sbin/ack.pl && alias ack="perl $HOME/.sbin/ack.pl"
+test -f $HOME/.sbin/rename.pl && alias rename="perl $HOME/.sbin/rename.pl"

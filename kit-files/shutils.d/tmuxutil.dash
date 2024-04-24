@@ -53,6 +53,9 @@ tmuxutil__main(){
         *) die "Err: invalid command '$cmd'" ;; 
     esac
 
+    if [ $? -gt 0 ] ; then
+        die "Err: quitting main ..."
+    fi
 }
 
 tmuxutil__is_up(){
@@ -60,22 +63,28 @@ tmuxutil__is_up(){
         echo tmux is running
         return 0
     else
-        info "Warn: tmux is not running"
+        fail "(tmuxutil__is_up): tmux is not running"
         return 1
     fi
 }
 
 tmuxutil__is_inside(){
 
-    tmuxutil__is_up > /dev/null || die "Err: tmux is not running"
+    tmuxutil__is_up > /dev/null || {
+        fail "(tmuxutil__is_inside): tmuxutil__is_up failed"
+        return 1
+    }
 
-    [ -z ${TERM_PROGRAM+x} ] && die "Err: cannot check for TERM_PROGRAM, maybe tmux is too old"
+    if [ -z "${TERM_PROGRAM+x}" ]; then  
+        fail "(tmuxutil__is_inside): cannot check for TERM_PROGRAM, maybe tmux is too old"
+        return 1
+    fi
 
     if [ "$TERM_PROGRAM" = tmux ]; then
         echo 'Inside tmux'
         return 0
     else
-        info 'Not inside tmux'
+        fail '(tmuxutil__is_inside): Not inside tmux'
         return 1
     fi
 }
@@ -85,20 +94,26 @@ tmuxutil__cmd_get(){
     local opt_session
     while [ $# -gt 0 ] ; do
         case "$1" in
-            -*) die "Err: invalid option '$1'";;
+            -*) fail "(tmuxutil__cmd_get) : invalid option '$1'"
+                return 1;;
             *) arg="$1"; shift; break ;;
         esac
         shift
     done 
 
-    tmuxutil__is_up > /dev/null 2>&1 || die "Err: tmux is not running"
+    tmuxutil__is_up > /dev/null 2>&1 || {
+        fail "(tmuxutil__cmd_get): tmuxutil__is_up failed"
+        return 1
+    }
 
     if [ -n "$arg" ] ; then
         case "$arg" in
             sess|session)  tmux display-message -p '#S';;
             win|window)  tmux display-message -p '#W';;
             sesswin|session:window)  tmux display-message -p '#S:#W';;
-            *) die "Err: invalid arg '$arg'";;
+            *) 
+                fail "(tmuxutil__cmd_get): invalid arg '$arg'"
+                return 1;;
         esac
     else
         tmux display-message -p '#S:#W'
@@ -113,18 +128,28 @@ tmuxutil__cmd_list(){
         case "$1" in
             -s|--sess) 
                 opt_session="${2:-}"
-                [ -n "$opt_session" ] || die "Err: session arg is empty"
+                if [ -z "$opt_session" ] ; then
+                    fail "(tmuxutil_cmd_list) : session arg is empty"
+                    return 1
+                fi
                 shift
                 ;;
-            -*) die "Err: invalid option '$1'";;
+            -*) fail "(tmuxutil__cmd_list): invalid option '$1'"
+                return 1;;
             *) arg="$1"; shift; break ;;
         esac
         shift
     done 
 
-    [ -n "$arg" ] || die "Err(cmd_is): no arg"
+    if [ -z "$arg" ]; then
+        fail "(tmuxutil__cmd_list): no arg"
+        return 1 
+    fi
 
-    tmuxutil__is_up > /dev/null || die "Err: tmux is not running"
+    tmuxutil__is_up > /dev/null || {
+        fail "(tmuxutil__cmd_list): tmuxutil__is_up failed"
+        return 1
+    }
 
     case "$arg" in
         sess|session) tmux list-sessions ;;
@@ -137,8 +162,9 @@ tmuxutil__cmd_list(){
             fi
         } | perl -ne '/^\d+:\s+([\w\*\-\_\.\s]+)\s\(/; print "$1"'
         ;;
-        *)
-            die "Err: invalid arg '$arg'"
+        *) fail "Err: invalid arg '$arg'"
+            return 1
+            ;;
     esac
 }
 
@@ -148,20 +174,25 @@ tmuxutil__cmd_is(){
     local option
     while [ $# -gt 0 ] ; do
         case "$1" in
-            -*) die "Err: invalid option '$1'";;
+            -*) fail "(cmd__is): invalid option '$1'"
+                return 1;;
             *) arg="$1"; shift; break ;;
         esac
         shift
     done 
 
 
-    [ -n "$arg" ] || die "Err(cmd_is): no arg"
+    if [ -z "$arg" ]; then
+        fail "Err(cmd_is): no arg"
+        return 1
+    fi
 
     case "$arg" in
         up) tmuxutil__is_up ;;
         inside) tmuxutil__is_inside ;;
         *)
-            die "Err: invalid account"
+            fail "(cmd_is): invalid account"
+            return 1;;
     esac
 }
 
@@ -173,14 +204,30 @@ tmuxutil__cmd_is(){
 prn(){ printf "%s" "$@"; }
 info(){ echo "$@" >&2;  }
 die(){ echo "$@" >&2; exit 1; }
+fail(){ printf "Fail %s\n" "$@" 1>&2; }
 
 help(){ perl -ne 'print "$1\n" if /^\s*#\s+(.*)/; exit if /^\s*[^#\s]+/;' "$0"; }
 usage(){ help | grep Usage 1>&2 ; die "or: --help" ; }
 absdir(){ 
     local fso="${1:-}"
-    if [ -f "$fso" ] ; then (cd "$(dirname "$fso" 2>/dev/null)" && pwd -P)
-    elif [ -d "$fso" ] ; then (cd "$fso" 2>/dev/null && pwd -P)
-    else die "Err: invalid filesystem object (file/dir) under '$fso'"
+    local absdir
+    if [ -f "$fso" ] ; then 
+        local fsod; fsod="$(dirname "$fso" 2>/dev/null)"  || { 
+            fail "(absdir) could not get dirname"
+            return 1
+        }
+        absdir="$(cd "$fsod" && pwd -P)" || { fail "(absdir), from file" ; return 1; }
+    elif [ -d "$fso" ] ; then 
+        absdir; absdir="$(cd "$fso" 2>/dev/null && pwd -P)" || { fail "absdir" ; return 1; }
+    else 
+        fail "(absdir): invalid filesystem object (file/dir) under '$fso'"
+        return 1
+    fi
+    if [ -n "$absdir" ] ; then
+        prn "$absdir"
+    else
+        fail "(absdir): empty"
+        return 1
     fi
 }
 
@@ -188,32 +235,41 @@ libpath(){
     local lib="${1:-}"; local pkg="${2:-}"; local version="${3:-}"
     local lib_str
     case $# in 3) lib_str="$pkg/${lib%.*}/${lib%.*}_${version}.${lib##*.}" ;; 2) lib_str="$pkg/${lib}";; 1) lib_str="${lib}";; esac
-    [ -n "$lib_str" ] || die "Err: could not set lib_str, wron number of args"
+    if [ -z "$lib_str" ]; then
+        fail  "(libpath): could not set lib_str, wron number of args"
+        return 1
+    fi
     local lib_path
     for dir in "${MAINDIR:-}" ${BKB_LIBRARY_PATH:-} "$HOME/.local/bkblib"; do
         if [ -f "$dir/$lib_str" ]; then lib_path="$dir/$lib_str";  BKB_LIBS="${lib},${lib_str} ${BKB_LIBS:-}"; break ; fi
     done
-    [ -f "${lib_path:-}" ] || die "Err: could not find lib for '$lib'" 
+    [ -f "${lib_path:-}" ] || {
+        fail "(libpath): could not find lib for '$lib'" 
+        return 1
+    }
     prn "${lib_path}"
 }
 
 loadlib(){ # for foolib.sh modulino.dash 
     local lib="${1:-}";
-    case "${lib:-}" in *lib.sh|*.dash) : ;; *) die "Err: not a valid lib '${lib:-}'" ;; esac
+    case "${lib:-}" in *lib.sh|*.dash) : ;; *) fail "loadlib: not a valid lib '${lib:-}'"; return 1 ;; esac
     local lib_str
     for l in ${BKB_LIBS:-}; do 
         if [ "${l%,*}" = "$lib" ]; then
             if [ "${l##*,}" = "$lib_str" ]; then  return 0; else info "Warn: lib '$lib' loaded,  '$lib_str' not loaded"; return 1; fi
         fi
     done
-    local lib_path; lib_path="$(libpath "$@")" || die "Err: library not loaded '$lib'"
-    . "$lib_path"
+    local lib_path; lib_path="$(libpath "$@")" || { fail "loudlib: library not loaded '$lib'" ; return 1; }
+    . "$lib_path" || { fail "loadlib: could not load '$lib_path'" ; return 1; }
 }
 
 
 if [ -z "${MAINDIR:-}" ] ; then
     MAINDIR="$(absdir "$0")" || die "Err: could not set MAINDIR"
-    tmuxutil__init && tmuxutil__main "$@" 
+    tmuxutil__init && tmuxutil__main "$@"  || die "Err: exiting ..."
 else
-    tmuxutil__init
+    tmuxutil__init || { 
+        fail "(tmuxutil__init): could not init"
+        return 1
+    }
 fi
