@@ -8,7 +8,7 @@
 # ~/.profile is loaded initially, but this is a simple way to update
 # edits in ~/.profile: simpy opening a new shell
 
-######## NONINTERACTIVE SHELLS
+######## NONINTERACTIVE SHELL
 
 if [ -f ~/.profile ] ; then
     . ~/.profile
@@ -16,13 +16,13 @@ else
     echo "Warn: ~/.profile not loaded" >&2
 fi
 
-if [ -d "${BKBCONF_HOME:-}" ] ; then
-    for confdir in "$BKBCONF_HOME"/*; do
+if [ -d "${PROFILE__SHELLCONF_HOME:-}" ] ; then
+    for confdir in "$PROFILE__SHELLCONF_HOME"/*; do
         [ -d "$confdir" ] || continue
         for shfile in "$confdir"/*.*sh ; do
             case "$shfile" in
                 *.sh|*.bash) 
-                    # echo source "$shfile"
+                    #echo source "$shfile"
                     [ -f "$shfile" ] && source "$shfile" ;;
                 *) : ;;
             esac
@@ -33,8 +33,19 @@ fi
 # if this is a non-interactive (login) shell, then this is it
 [ -z "$PS1" ] && return
 
+######## INTERACTIVE SHELL
 
-######## INTERACTIVE SHELLS
+for dir in "${PROFILE__ALIASES_HOME:-}" ; do
+   [ -d "$dir" ] || continue
+   for shfile in $dir/*.*sh ; do
+      case "$shfile" in
+         *.sh|*.bash) 
+             #[ -f "$shfile" ] && echo source "$shfile" 
+             [ -f "$shfile" ] && source "$shfile" ;;
+         *) : ;;
+      esac
+   done
+done
 
 ## GLOBAL SETTINGS
 # Setting for the new UTF-8 terminal support in Lion
@@ -65,14 +76,4 @@ HISTFILESIZE=2000
 # update the values of LINES and COLUMNS.
 shopt -s checkwinsize
 
-for dir in "${PROFILE__HOMEKIT_ALIASES:-}" "${PROFILE__HOMEKIT_ENVIRONMENT:-}" ; do
-   [ -d "$dir" ] || continue
-   for shfile in $dir/*.*sh ; do
-      case "$shfile" in
-         *.sh|*.bash) [ -f "$shfile" ] && source "$shfile" ;;
-         *) : ;;
-      esac
-   done
-done
 
-. "$HOME/.cargo/env"

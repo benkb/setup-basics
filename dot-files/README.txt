@@ -1,6 +1,7 @@
 Dotfiles
 
 basic configuration of standard tools like bash and vim
+The absolute minimum
 
 
 

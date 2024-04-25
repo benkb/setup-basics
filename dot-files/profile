@@ -17,11 +17,15 @@
 # USER Variables
 #
 # personal libraries ~/.local/bkblib/vimlib/vitmux/vitmxux_2023221132.sh
-export BKBLIB_HOME=''
-[ -d "$HOME/.local/bkblib" ] && export BKBLIB_HOME="$HOME/.local/bkblib"
+export PROFILE__SHELLIB_HOME=''
+[ -d "$HOME/kit/shellib" ] && export PROFILE__SHELLIB_HOME="$HOME/kit/shellib"
 
-export BKBCONF_HOME=''
-[ -d "$HOME/.config/bkbconf" ] && export BKBCONF_HOME="$HOME/.config/bkbconf"
+export PROFILE__SHELLCONF_HOME=''
+[ -d "$HOME/kit/shellconf" ] && export PROFILE__SHELLCONF_HOME="$HOME/kit/shellconf"
+
+export PROFILE__ALIASES_HOME=''
+[ -d "$HOME/kit/aliases" ] && export PROFILE__ALIASES_HOME="$HOME/kit/aliases"
+
 
 ########## PATH
 

@@ -2,55 +2,57 @@
 #
 set -u
 
-HOMEBASE="$HOME/base"
-
-BASEJUMP="$HOMEBASE/jump"
-FILESBASE="$HOMEBASE/files"
+LINKDIR="${1:-}"
 
 die () { echo "$@"; exit 1; }
+
+if [ -n "$LINKDIR" ] ; then
+    [ -d "$LINKDIR" ] || die "Err: no valid LINKDIR '$LINKDIR'"
+fi
 
 SCRIPTNAME="${0##*/}"
 SCRIPTDIR="$(cd "${0%/*}" ; pwd -P ;)"
 
 SCRIPTDIR_NAME="${SCRIPTDIR##*/}"
 
-DIR_TYPE="${SCRIPTDIR_NAME%-*}"
-
-BASEFOLDER=
-IS_DOTFILES=
-case "$SCRIPTDIR_NAME" in 
-    *-files)     
-        case "$DIR_TYPE" in
-            dot) IS_DOTFILES=1 ;;
-            *) : ;;
-        esac
-        BASEFOLDER="$HOMEBASE/${DIR_TYPE}" 
+HOMEPATH=
+DOTFILES=
+case "$SCRIPTDIR_NAME" in
+    *-*-*) die "Err: please only one '-' in dir" ;;
+    dot-files) 
+        DOTFILES=1 
+        HOMEPATH="$HOME/." ;;
+    *-files) 
+        HOMEPATH="$HOME/${SCRIPTDIR_NAME%%-*}/" 
+        mkdir -p "$HOMEPATH" || die "Err: could not create HOMEPATH '$HOMEPATH'"
         ;;
-    *)  die "Err: '$SCRIPTDIR_NAME' does not look a files folder" ;;
+    *-*) die "Err: please ending on '*-files'" ;;
+    *) die "Err: please at least one '-' in dir" ;;
 esac
 
 
-mkdir -p "$BASEJUMP"
-mkdir -p "$BASEFOLDER"
 
-mkdir -p "$FILESBASE"
-rm -f "$FILESBASE/$SCRIPTDIR_NAME"
-ln -s "$SCRIPTDIR" "$FILESBASE/$SCRIPTDIR_NAME"
+link_to_target(){
+    local source="${1:-}"
+    [ -n "$source" ] || die "Err: no source"
+    local target="${2:-}"
+    [ -n "$target" ] || die "Err: no target_item"
 
-rm -f "$BASEJUMP"/files
-ln -s "$FILESBASE" "$BASEJUMP"/files
+    local target_dir="$(dirname "$target")"
 
-rm -f "$BASEJUMP/$SCRIPTDIR_NAME"
-ln -s "$SCRIPTDIR" "$BASEJUMP/$SCRIPTDIR_NAME"
+    if [ -d "$target_dir" ]; then
+        :
+    elif [ -L "$target_dir" ]; then
+        die "Err: '$target_dir' is a link"
+    elif [ -f "$target_dir" ]; then
+        die "Err: '$target_dir' is a file"
+    elif [ -e "$target_dir" ]; then
+        die "Err: '$target_dir' exists already"
+    else
+        mkdir -p "$target_dir" 
+    fi
 
-rm -f "$BASEJUMP/$DIR_TYPE"
-ln -s "$BASEFOLDER" "$BASEJUMP/$DIR_TYPE"
-
-remove_target(){
-    local target="${1:-}"
-    [ -n "$target" ] || die "Err: no target"
-
-    if [ -f "$target" ]; then
+    if [ -L "$target" ]; then
         rm -f "$target"
     elif [ -d "$target" ]; then
         if [ -L "$target" ] ; then
@@ -58,121 +60,84 @@ remove_target(){
         else
             die "Err: the target '$target' is a directory, cannot remove"
         fi
+    elif [ -f "$target" ]; then
+        die "Err: cannot remove file '$target'"
     else
-        rm -f "$target"
+        [ -e "$target" ] && die "Err: cannot remove item '$target'"
     fi
+
+    ln -s "$source" "$target"
 }
 
-link_to_target(){
+
+link_to_linkdir(){
     local source="${1:-}"
     [ -n "$source" ] || die "Err: no source"
-    local target_basefolder="${2:-}"
-    [ -n "$target_basefolder" ] || die "Err: target_basefolder "
-    local target_item="${3:-}"
+    local target_item="${2:-}"
     [ -n "$target_item" ] || die "Err: no target_item"
-    local is_dotfile="${4:-}"
 
-    [ -d "$target_basefolder" ] || die "Err: basefolder does not exists"
-
-    local target="$target_basefolder/$target_item"
-
-    remove_target "$target"
-    ln -s "$source" "$target"
-
-    if [ -n "$IS_DOTFILES" ] || [ -n "$is_dotfile" ]  ; then
-        remove_target "${HOME}/.${target_item}"
-        ln -s "$source" "${HOME}/.${target_item}"
+    if [ -n "$LINKDIR" ] ; then
+        if [ -n "$DOTFILES" ] ; then
+            rm -f "$LINKDIR/.$target_item"
+            ln -s "$i" "$LINKDIR/.$target_item"
+        else
+            rm -f "$LINKDIR/$target_item"
+            ln -s "$i" "$LINKDIR/$target_item"
+        fi
     fi
 }
 
+handle_dir(){
+   local homepath="${1:-}"
+   [ -n "$homepath" ] || die "Err: no homepath"
+   [ -d "$homepath" ] || die "Err: no valid homepath '$homepath'"
+   local dir="${2:-}"
+   [ -n "$dir" ] || die "Err: no dir"
+   [ -d "$dir" ] || die "Err: no valid dir '$dir'"
 
-for i in "$PWD"/* ; do
-    [ -f "$i" ] || [ -d "$i" ] || continue 
+    for i in "$dir"/* ; do
+        [ -f "$i" ] || [ -d "$i" ] || continue 
 
-	bi="${i##*/}"
+        local bi="${i##*/}"
 
-    case "$bi" in $SCRIPTNAME|README*) continue ;; *) : ;; esac
+        case "$bi" in $SCRIPTNAME|README*) continue ;; *) : ;; esac
 
-    target_name="${bi%.*}"
+        local target_name="${bi%.*}"
 
-    if [ -f "$i" ] ; then
-    	link_to_target "$i" "$BASEFOLDER" "${bi}"
-        if [ -n "$IS_DOTFILES" ]; then
-            rm -f "${BASEJUMP}/.${bi}"
-            ln -s "$i" "${BASEJUMP}/.${bi}"
-        else
-            rm -f "${BASEJUMP}/${bi}"
-            ln -s "$i" "${BASEJUMP}/${bi}"
-        fi
-	elif [ -d "$i" ] ; then
-        # magic: fish-config -> config/fish; dot-HOME -> /home/baba/dot
-        target_folder="$(perl -e '($a)=@ARGV; print(join("/", reverse( map { (/^[A-Z]+$/)?$ENV{$_}:$_ } split("-", $a))))' "$target_name")" 
-        target_folder_parent="${target_folder%/*}"
-        target_folder_top="${target_folder%%/*}"
+        if [ -f "$i" ] ; then
+            link_to_target "$i" "${homepath}${bi}"
+            link_to_linkdir "$i" "${homepath}${bi}"
+        elif [ -d "$i" ] ; then
+            # magic: fish-config -> config/fish; dot-HOME -> /home/baba/dot
+            local target_folder="$(perl -e '($a)=@ARGV; print(join("/", reverse( map { (/^[A-Z]+$/)?$ENV{$_}:$_ } split("-", $a))))' "$target_name")" 
 
-        # Cover the basics: parent directories
-        IS_DOTDIR=''
-        case "$target_folder" in
-            */*)
-                case "$target_folder" in
-                    /*/dot) IS_DOTDIR=1;; 
-                    /*) die "Err: not supported yet '$target_folder'";;
-                    *)
-                        mkdir -p "$BASEFOLDER/$target_folder_parent"
-                        if [ -n "$IS_DOTFILES" ]; then
-                            mkdir -p "$HOME/.$target_folder_parent"
-                            rm -f "${BASEJUMP}/.${target_folder_top}"
-                            ln -s "$HOME/.$target_folder_top" "$BASEJUMP/.$target_folder_top"
-                        else
-                            rm -f "${BASEJUMP}/${target_folder_parent}"
-                            ln -s "$BASEFOLDER/$target_folder_parent" "${BASEJUMP}/${target_folder_parent}"
-                        fi
+            local target_dirpath=
+            local target_topdir=
+            case "$target_folder" in
+                /*)
+                    target_topdir="${target_name}"
+                    target_dirpath="$target_folder" 
                     ;;
-                esac
-                ;;
-            *) 
-                target_folder="$target_name"
-                target_folder_parent=''
-            ;;
-        esac
+                *) 
+                    target_topdir="${target_folder%%/*}"
+                    target_dirpath="${homepath}$target_folder" 
+                    ;;
+            esac
 
+            link_to_linkdir "$i" "${target_topdir}"
 
-        case "$bi" in
-            *.d)
-                if [ -n "$IS_DOTDIR" ] ; then
-                    rm -f "$BASEFOLDER/$bi"
-                    ln -s "$i" "$BASEFOLDER/$bi"
-                    for ii in "$i"/* ; do 
-                        [ -f "$ii" ] || [ -d "$ii" ] || continue 
-                        bii="${ii##*/}"
-                        rm -f "$HOME/.$bii"
-                        ln -s "$ii" "$HOME/.$bii"
-                        rm -f "$BASEJUMP/.$bii"
-                        ln -s "$ii" "$BASEJUMP/.$bii"
-                    done
-                else
-                    mkdir -p "$BASEFOLDER/$target_folder"
-                    [ -n "$IS_DOTFILES" ] && mkdir -p "$HOME/.$target_folder"
-                    for ii in "$i"/* ; do 
-                        [ -f "$ii" ] || [ -d "$ii" ] || continue 
-                        bii="${ii##*/}"
-                        dotii="$target_folder/$bii"
-                        if [ -f "$ii" ] ; then 
-                            link_to_target "$ii" "$BASEFOLDER" "$dotii"
-                        elif [ -d "$ii" ] ; then 
-                            case "$bii" in
-                                *.d) die "Err: nested folders are not supported $ii, only folders.d" ;;
-                                *) link_to_target "$ii" "$BASEFOLDER" "${dotii%.*}" ;;
-                            esac
-                        else
-                            die "Err: not supported source path $ii"
-                        fi
-                    done
-                fi
-            ;;
-            *) link_to_target "$i" "$BASEFOLDER" "$target_folder" ;;
-        esac
-	else
-		echo "Warn: omit $i"
-	fi
-done
+            case "$bi" in
+                dotfiles)   handle_dir "$HOME/." "$i" ;;
+                *.d)   
+                    mkdir -p "$target_dirpath" || die "Err: could not create '$target_dirpath'"
+                    handle_dir "$target_dirpath/" "$i" ;;
+                *.l) link_to_target "$i" "$target_dirpath" ;;
+                *) die "Err; don't know what to do with '$bi', is it [l]ink or [d]irectory?" ;;
+            esac
+        else
+            echo "Warn: omit $i"
+        fi
+    done
+}
+
+handle_dir "$HOMEPATH" "$PWD"
