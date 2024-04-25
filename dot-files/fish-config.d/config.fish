@@ -12,20 +12,18 @@ set -gx GPG_TTY (/usr/bin/tty)
 ### Interactive Shell Only
 # if this called during the init of a script its time to go
 # was not a good idea when using fish from ssh
-# status --is-login || exit 
 
-[ -e $HOME/.profile ]  && source $HOME/.profile
+status is-interactive || return 0 
 
-status is-interactive || exit
-
-# sourcing configs and aliases
-for fishdir in $HOME/.config/env $HOME/kit/aliases
+# sourcing for environment variables and aliases
+for fishdir in $HOME/kit/environment $HOME/kit/aliases
     [ -d $fishdir ] || continue
     for fishfile in $fishdir/*.*sh 
         [ -f $fishfile ] || continue
         
         switch "$fishfile"
             case '*.fish' '*.sh'
+                #[ -f $fishfile ] && echo source $fishfile
                 [ -f $fishfile ] && source $fishfile
             case '*'
                 continue

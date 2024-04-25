@@ -1,6 +1,6 @@
 Dotfiles
 
-basic configuration of  standard tools like bash and vim
+basic configuration of standard tools like bash and vim
 
 
 
