@@ -37,6 +37,7 @@ link_to_target(){
     if [ -L "$source" ] ; then
         cp -P "$source" "$target"
     else
+        # echo ln -s "$source" "$target"
         ln -s "$source" "$target"
     fi
 }
@@ -82,6 +83,8 @@ for d in "$PWD"/*; do
     link_to_target "$PWD" "$HOMEBASE/$_maindir/$bd"
 
     link_to_target "$HOMEBASE/$_maindir" "$BASEJUMP/$_maindir"
+
+   link_to_target "$d" "$BASEJUMP/$bd"
 done
 
 
